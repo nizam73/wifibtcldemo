@@ -337,7 +337,6 @@ p.subtitle {
     color: var(--bg-dark);
 }
 
-/* White background for Connect button */
 .sub-action-btn.btn-connect {
     background-color: #ffffff;
     color: var(--bg-dark);
