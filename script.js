@@ -3,7 +3,9 @@ let purchasedSubscriptions = [];
 let activeSubscriptionIndex = null;
 let historyLogs = [];
 let timerInterval = null;
+let freeTimerInterval = null;
 let userSessionType = null; // 'free' or 'premium'
+let freeWifiSeconds = 12 * 60; // 12 Minutes = 720 seconds
 
 function navigateTo(screenId) {
     closeDropdown();
@@ -44,25 +46,54 @@ function logout() {
     navigateTo('screen-welcome');
 }
 
-/* Free Wi-Fi Flow with exact reverse timer formatting */
+/* Free Wi-Fi Flow (10s Ad + 12m Reverse Counter) */
 function handleFreeWifi() {
     userSessionType = 'free';
     navigateTo('screen-ad');
-    let timeLeft = 5;
+    let timeLeft = 10; // 10-second Ad duration
     const timerElement = document.getElementById('ad-timer');
     timerElement.innerText = `Your internet session starts in ${timeLeft} sec`;
     
-    const countdown = setInterval(() => {
+    const adCountdown = setInterval(() => {
         timeLeft--;
         if (timeLeft > 0) {
             timerElement.innerText = `Your internet session starts in ${timeLeft} sec`;
         } else {
-            clearInterval(countdown);
-            document.getElementById('session-timer').innerText = "FREE SESSION";
+            clearInterval(adCountdown);
+            timerElement.innerText = 'Your internet session starts in 10 sec';
             navigateTo('screen-connected');
-            timerElement.innerText = 'Your internet session starts in 5 sec';
+            startFreeWifiTimer();
         }
     }, 1000);
+}
+
+function startFreeWifiTimer() {
+    if (freeTimerInterval) clearInterval(freeTimerInterval);
+    if (timerInterval) clearInterval(timerInterval);
+
+    updateFreeWifiDisplay();
+    freeTimerInterval = setInterval(() => {
+        if (freeWifiSeconds > 0) {
+            freeWifiSeconds--;
+            updateFreeWifiDisplay();
+        } else {
+            clearInterval(freeTimerInterval);
+            document.getElementById('session-timer').innerText = "EXPIRED";
+        }
+    }, 1000);
+}
+
+function updateFreeWifiDisplay() {
+    const hours = Math.floor(freeWifiSeconds / 3600);
+    const minutes = Math.floor((freeWifiSeconds % 3600) / 60);
+    const seconds = freeWifiSeconds % 60;
+
+    const formatted = 
+        String(hours).padStart(2, '0') + ':' +
+        String(minutes).padStart(2, '0') + ':' +
+        String(seconds).padStart(2, '0');
+
+    document.getElementById('session-timer').innerText = formatted;
 }
 
 function handleGoToHome() {
@@ -141,6 +172,7 @@ function handleSubscriptionClick(index) {
     }
 
     if (!targetSub.isActivated) {
+        if (freeTimerInterval) clearInterval(freeTimerInterval);
         targetSub.isActivated = true;
         activeSubscriptionIndex = index;
         startReverseCounter(index);
