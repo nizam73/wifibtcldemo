@@ -5,7 +5,7 @@ let historyLogs = [];
 let timerInterval = null;
 let freeTimerInterval = null;
 let userSessionType = null; // 'free' or 'premium'
-let freeWifiSeconds = 12 * 60; // 12 Minutes = 720 seconds
+let freeWifiSeconds = 12 * 60; // 12 Minutes
 
 function navigateTo(screenId) {
     closeDropdown();
@@ -46,11 +46,11 @@ function logout() {
     navigateTo('screen-welcome');
 }
 
-/* Free Wi-Fi Flow (10s Ad + 12m Reverse Counter) */
+/* Free Wi-Fi Flow */
 function handleFreeWifi() {
     userSessionType = 'free';
     navigateTo('screen-ad');
-    let timeLeft = 10; // 10-second Ad duration
+    let timeLeft = 10;
     const timerElement = document.getElementById('ad-timer');
     timerElement.innerText = `Your internet session starts in ${timeLeft} sec`;
     
@@ -115,6 +115,7 @@ function processPayment() {
     if (!selectedPackageData) return;
 
     userSessionType = 'premium';
+    const purchaseTimeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     purchasedSubscriptions.push({
         id: Date.now(),
@@ -122,17 +123,29 @@ function processPayment() {
         price: selectedPackageData.price,
         durationSeconds: selectedPackageData.durationSeconds,
         remainingSeconds: selectedPackageData.durationSeconds,
+        purchaseTime: purchaseTimeString,
         isActivated: false
     });
 
     historyLogs.push({
         name: selectedPackageData.name,
         price: selectedPackageData.price,
-        date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        date: purchaseTimeString
     });
     renderHistory();
 
     navigateTo('screen-dashboard');
+}
+
+function formatTime(totalSeconds) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return (
+        String(hours).padStart(2, '0') + ':' +
+        String(minutes).padStart(2, '0') + ':' +
+        String(seconds).padStart(2, '0')
+    );
 }
 
 function renderSubscriptionStack() {
@@ -147,15 +160,17 @@ function renderSubscriptionStack() {
         const isActivated = sub.isActivated;
         const btnClass = isActivated ? "sub-action-btn btn-connect" : "sub-action-btn btn-activate";
         const btnLabel = isActivated ? "Connect" : "Activate";
-        const statusText = isActivated ? "Active Session Running" : "Ready for Activation";
 
         return `
             <div class="sub-card">
-                <div class="sub-details">
-                    <h4>${sub.name} | ${sub.price} Taka</h4>
-                    <p>${statusText}</p>
+                <div class="sub-card-top">
+                    <span class="sub-title">${sub.name} | ${sub.price} Taka</span>
+                    <span class="sub-timer" id="sub-timer-${index}">${formatTime(sub.remainingSeconds)}</span>
                 </div>
-                <button class="${btnClass}" onclick="handleSubscriptionClick(${index})">${btnLabel}</button>
+                <div class="sub-card-bottom">
+                    <span class="sub-details-text" onclick="showPackageDetails(${index})">Details</span>
+                    <button class="${btnClass}" onclick="handleSubscriptionClick(${index})">${btnLabel}</button>
+                </div>
             </div>
         `;
     }).join('');
@@ -165,7 +180,6 @@ function handleSubscriptionClick(index) {
     userSessionType = 'premium';
     const targetSub = purchasedSubscriptions[index];
 
-    // Show popup if trying to activate a second package while one is active
     if (activeSubscriptionIndex !== null && activeSubscriptionIndex !== index && targetSub.remainingSeconds > 0) {
         showModal("You already have an active package");
         return;
@@ -205,17 +219,35 @@ function updateTimerDisplay(index) {
     const currentSub = purchasedSubscriptions[index];
     if (!currentSub) return;
 
-    const total = currentSub.remainingSeconds;
-    const hours = Math.floor(total / 3600);
-    const minutes = Math.floor((total % 3600) / 60);
-    const seconds = total % 60;
-
-    const formatted = 
-        String(hours).padStart(2, '0') + ':' +
-        String(minutes).padStart(2, '0') + ':' +
-        String(seconds).padStart(2, '0');
-
+    const formatted = formatTime(currentSub.remainingSeconds);
+    
+    // Update main connection page counter
     document.getElementById('session-timer').innerText = formatted;
+
+    // Update in-card timer if visible
+    const cardTimerEl = document.getElementById(`sub-timer-${index}`);
+    if (cardTimerEl) {
+        cardTimerEl.innerText = formatted;
+    }
+}
+
+/* Package Details Modal View */
+function showPackageDetails(index) {
+    const sub = purchasedSubscriptions[index];
+    if (!sub) return;
+
+    document.getElementById('detail-name').innerText = sub.name;
+    document.getElementById('detail-price').innerText = `${sub.price} Taka`;
+    document.getElementById('detail-time').innerText = sub.purchaseTime;
+    document.getElementById('detail-duration').innerText = formatTime(sub.durationSeconds);
+    document.getElementById('detail-status').innerText = sub.isActivated ? "Active & Running" : "Not Activated";
+    document.getElementById('detail-remaining').innerText = formatTime(sub.remainingSeconds);
+
+    document.getElementById('modal-details').classList.add('active');
+}
+
+function closeDetailsModal() {
+    document.getElementById('modal-details').classList.remove('active');
 }
 
 function renderHistory() {
