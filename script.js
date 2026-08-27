@@ -1,56 +1,215 @@
 let selectedPackageData = null;
+let purchasedSubscriptions = [];
+let activeSubscriptionIndex = null;
+let historyLogs = [];
+let timerInterval = null;
+let userSessionType = null; // 'free' or 'premium'
 
 function navigateTo(screenId) {
-    document.querySelectorAll('.screen').forEach(screen => {
+    closeDropdown();
+    const screens = document.querySelectorAll('.screen');
+    screens.forEach(screen => {
         screen.classList.remove('active');
     });
-    document.getElementById(screenId).classList.add('active');
+
+    const targetScreen = document.getElementById(screenId);
+    if (targetScreen) {
+        targetScreen.classList.add('active');
+    }
+
+    if (screenId === 'screen-dashboard') {
+        renderSubscriptionStack();
+    }
 }
 
+/* Dropdown Navbar */
+function toggleDropdown() {
+    const menu = document.getElementById('dropdown-menu');
+    menu.classList.toggle('show');
+}
+
+function closeDropdown() {
+    const menu = document.getElementById('dropdown-menu');
+    if (menu) menu.classList.remove('show');
+}
+
+function closeDropdownIfOpen(event) {
+    if (!event.target.matches('.more-btn')) {
+        closeDropdown();
+    }
+}
+
+function logout() {
+    userSessionType = null;
+    navigateTo('screen-welcome');
+}
+
+/* Free Wi-Fi Flow with exact reverse timer formatting */
 function handleFreeWifi() {
+    userSessionType = 'free';
     navigateTo('screen-ad');
     let timeLeft = 5;
     const timerElement = document.getElementById('ad-timer');
+    timerElement.innerText = `Your internet session starts in ${timeLeft} sec`;
     
     const countdown = setInterval(() => {
         timeLeft--;
-        timerElement.innerText = timeLeft + 's';
-        if (timeLeft <= 0) {
+        if (timeLeft > 0) {
+            timerElement.innerText = `Your internet session starts in ${timeLeft} sec`;
+        } else {
             clearInterval(countdown);
+            document.getElementById('session-timer').innerText = "FREE SESSION";
             navigateTo('screen-connected');
-            timerElement.innerText = '5s';
+            timerElement.innerText = 'Your internet session starts in 5 sec';
         }
     }, 1000);
 }
 
-function selectPackage(name, price) {
-    selectedPackageData = { name, price };
+function handleGoToHome() {
+    if (userSessionType === 'free') {
+        navigateTo('screen-welcome');
+    } else {
+        navigateTo('screen-dashboard');
+    }
+}
+
+/* Premium Payments & Stacking Logic */
+function selectPackage(name, price, durationSeconds) {
+    selectedPackageData = { name, price, durationSeconds };
     document.getElementById('bkash-amount-label').innerText = `Amount: ${price} Taka`;
     navigateTo('screen-bkash');
 }
 
 function processPayment() {
-    if(!selectedPackageData) return;
+    if (!selectedPackageData) return;
 
-    const container = document.getElementById('subscription-container');
-    
-    container.innerHTML = `
-        <div class="sub-card">
-            <div class="sub-details">
-                <h4>${selectedPackageData.name} | ${selectedPackageData.price} Taka</h4>
-                <p>Details Active</p>
-            </div>
-            <button class="sub-action-btn" id="connect-pkg-btn" onclick="navigateTo('screen-connected')">Connect</button>
-        </div>
-    `;
-    
+    userSessionType = 'premium';
+
+    purchasedSubscriptions.push({
+        id: Date.now(),
+        name: selectedPackageData.name,
+        price: selectedPackageData.price,
+        durationSeconds: selectedPackageData.durationSeconds,
+        remainingSeconds: selectedPackageData.durationSeconds,
+        isActivated: false
+    });
+
+    historyLogs.push({
+        name: selectedPackageData.name,
+        price: selectedPackageData.price,
+        date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+    renderHistory();
+
     navigateTo('screen-dashboard');
 }
 
-function resetPortal() {
-    selectedPackageData = null;
-    document.getElementById('subscription-container').innerHTML = `
-        <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 10px 0;">No packages purchased yet.</p>
-    `;
-    navigateTo('screen-welcome');
+function renderSubscriptionStack() {
+    const container = document.getElementById('subscription-container');
+    
+    if (purchasedSubscriptions.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 10px 0;">No active packages purchased yet.</p>`;
+        return;
+    }
+
+    container.innerHTML = purchasedSubscriptions.map((sub, index) => {
+        const isActivated = sub.isActivated;
+        const btnClass = isActivated ? "sub-action-btn btn-connect" : "sub-action-btn btn-activate";
+        const btnLabel = isActivated ? "Connect" : "Activate";
+        const statusText = isActivated ? "Active Session Running" : "Ready for Activation";
+
+        return `
+            <div class="sub-card">
+                <div class="sub-details">
+                    <h4>${sub.name} | ${sub.price} Taka</h4>
+                    <p>${statusText}</p>
+                </div>
+                <button class="${btnClass}" onclick="handleSubscriptionClick(${index})">${btnLabel}</button>
+            </div>
+        `;
+    }).join('');
+}
+
+function handleSubscriptionClick(index) {
+    userSessionType = 'premium';
+    const targetSub = purchasedSubscriptions[index];
+
+    // Show popup if trying to activate a second package while one is active
+    if (activeSubscriptionIndex !== null && activeSubscriptionIndex !== index && targetSub.remainingSeconds > 0) {
+        showModal("You already have an active package");
+        return;
+    }
+
+    if (!targetSub.isActivated) {
+        targetSub.isActivated = true;
+        activeSubscriptionIndex = index;
+        startReverseCounter(index);
+    }
+
+    renderSubscriptionStack();
+    navigateTo('screen-connected');
+}
+
+function startReverseCounter(index) {
+    if (timerInterval) clearInterval(timerInterval);
+
+    updateTimerDisplay(index);
+    timerInterval = setInterval(() => {
+        const currentSub = purchasedSubscriptions[index];
+        if (currentSub && currentSub.remainingSeconds > 0) {
+            currentSub.remainingSeconds--;
+            updateTimerDisplay(index);
+        } else {
+            clearInterval(timerInterval);
+            if(currentSub) currentSub.isActivated = false;
+            activeSubscriptionIndex = null;
+            document.getElementById('session-timer').innerText = "EXPIRED";
+            renderSubscriptionStack();
+        }
+    }, 1000);
+}
+
+function updateTimerDisplay(index) {
+    const currentSub = purchasedSubscriptions[index];
+    if (!currentSub) return;
+
+    const total = currentSub.remainingSeconds;
+    const hours = Math.floor(total / 3600);
+    const minutes = Math.floor((total % 3600) / 60);
+    const seconds = total % 60;
+
+    const formatted = 
+        String(hours).padStart(2, '0') + ':' +
+        String(minutes).padStart(2, '0') + ':' +
+        String(seconds).padStart(2, '0');
+
+    document.getElementById('session-timer').innerText = formatted;
+}
+
+function renderHistory() {
+    const historyContainer = document.getElementById('history-container');
+    if (historyLogs.length === 0) {
+        historyContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 20px 0;">No previous history found.</p>`;
+        return;
+    }
+
+    historyContainer.innerHTML = historyLogs.map(item => `
+        <div class="history-card">
+            <div class="history-details">
+                <h4>${item.name} Package</h4>
+                <p>Purchased at ${item.date}</p>
+            </div>
+            <div style="font-weight: 700; color: var(--primary-yellow);">${item.price} Taka</div>
+        </div>
+    `).join('');
+}
+
+/* Modal Helpers */
+function showModal(msg) {
+    document.getElementById('modal-message').innerText = msg;
+    document.getElementById('modal-alert').classList.add('active');
+}
+
+function closeModal() {
+    document.getElementById('modal-alert').classList.remove('active');
 }
