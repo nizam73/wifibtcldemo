@@ -6,14 +6,13 @@
     <title>BTCL Wifi Hotspot</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div class="app-container">
 
-        <!-- SCREEN 1: Welcome Screen (Main Home) -->
         <div id="screen-welcome" class="screen active">
             <div class="content" style="justify-content: center;">
                 <div class="hero-section">
@@ -28,7 +27,6 @@
             </div>
         </div>
 
-        <!-- SCREEN 2: Ad Screen (Free Path) -->
         <div id="screen-ad" class="screen">
             <div class="ad-container">
                 <div class="timer-badge" id="ad-timer">Your internet session starts in 10 sec</div>
@@ -36,12 +34,11 @@
             </div>
         </div>
 
-        <!-- SCREEN 3: Mobile Login Screen -->
         <div id="screen-login" class="screen">
             <div class="navbar">
                 <div class="nav-left">
                     <img src="BHive-Logo10-07.png" alt="Logo" class="nav-logo" onerror="this.src='https://via.placeholder.com/32?text=Logo'">
-                    <span class="nav-title">BTCL Hotspot Portal</span>
+                    <span class="nav-title">BTCL Wifi Hotspot</span>
                 </div>
             </div>
             <div class="content">
@@ -56,7 +53,6 @@
             </div>
         </div>
 
-        <!-- SCREEN 4: OTP Verification Screen -->
         <div id="screen-otp" class="screen">
             <div class="navbar">
                 <div class="nav-left">
@@ -76,12 +72,11 @@
             </div>
         </div>
 
-        <!-- SCREEN 5: Premium Dashboard Portal -->
         <div id="screen-dashboard" class="screen">
             <div class="navbar">
                 <div class="nav-left">
                     <img src="BHive-Logo10-07.png" alt="Logo" class="nav-logo" onerror="this.src='https://via.placeholder.com/32?text=Logo'">
-                    <span class="nav-title">Premium Dashboard</span>
+                    <span class="nav-title">BTCL Wifi Hotspot</span>
                 </div>
                 <div class="dropdown-wrapper">
                     <button class="more-btn" onclick="toggleDropdown()">More ▾</button>
@@ -91,39 +86,31 @@
                     </div>
                 </div>
             </div>
-            <div class="content" style="padding: 15px;" onclick="closeDropdownIfOpen(event)">
+            <div class="content" style="padding: 16px;" onclick="closeDropdownIfOpen(event)">
                 
-                <div class="section-title">Packages</div>
-                
-                <div class="package-card" onclick="selectPackage('1 Hour', 2, 3600)">
-                    <div class="package-info">
-                        <h3>1 Hour</h3>
+                <div class="ui-group-card">
+                    <div class="section-title">Packages</div>
+                    
+                    <div class="package-card" onclick="selectPackage('1 Hour', 2, 3600)">
+                        <span class="package-name">1 Hour</span>
+                        <div class="package-action-btn">2 Taka</div>
                     </div>
-                    <div class="package-action-btn">2 Taka</div>
+
+                    <div class="package-card" onclick="selectPackage('2 Hours', 3, 7200)">
+                        <span class="package-name">2 Hours</span>
+                        <div class="package-action-btn">3 Taka</div>
+                    </div>
                 </div>
 
-                <div class="package-card" onclick="selectPackage('2 Hours', 3, 7200)">
-                    <div class="package-info">
-                        <h3>2 Hours</h3>
+                <div class="ui-group-card">
+                    <div class="section-title">Your Subscriptions</div>
+                    <div id="subscription-container">
+                        <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 10px 0;">No active packages purchased yet.</p>
                     </div>
-                    <div class="package-action-btn">3 Taka</div>
-                </div>
-
-                <div class="package-card" onclick="selectPackage('8 Hours', 8, 28800)">
-                    <div class="package-info">
-                        <h3>8 Hours</h3>
-                    </div>
-                    <div class="package-action-btn">8 Taka</div>
-                </div>
-
-                <div class="section-title">Your Subscriptions</div>
-                <div class="subscription-box" id="subscription-container">
-                    <p style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 10px 0;">No active packages purchased yet.</p>
                 </div>
             </div>
         </div>
 
-        <!-- SCREEN 6: Purchase History Screen -->
         <div id="screen-history" class="screen">
             <div class="navbar">
                 <div class="nav-left">
@@ -140,7 +127,6 @@
             </div>
         </div>
 
-        <!-- SCREEN 7: Dummy bKash Gateway Interface -->
         <div id="screen-bkash" class="screen" style="background-color: #f5f5f5;">
             <div class="content" style="justify-content: center;">
                 <div class="bkash-container">
@@ -160,7 +146,6 @@
             </div>
         </div>
 
-        <!-- SCREEN 8: Connected Screen -->
         <div id="screen-connected" class="screen">
             <div class="content" style="justify-content: space-between;">
                 <div class="success-state">
@@ -177,7 +162,39 @@
             </div>
         </div>
 
-        <!-- MODAL: Alert Popup -->
+        <div id="modal-details" class="modal-overlay">
+            <div class="modal-box text-left">
+                <h3 style="color: var(--bg-dark); margin-bottom: 16px; font-weight: 700;">Package Details</h3>
+                <div class="details-list">
+                    <div class="details-row">
+                        <span class="details-label">Package Name</span>
+                        <span class="details-val" id="detail-name">-</span>
+                    </div>
+                    <div class="details-row">
+                        <span class="details-label">Price</span>
+                        <span class="details-val" id="detail-price">-</span>
+                    </div>
+                    <div class="details-row">
+                        <span class="details-label">Purchased At</span>
+                        <span class="details-val" id="detail-time">-</span>
+                    </div>
+                    <div class="details-row">
+                        <span class="details-label">Total Duration</span>
+                        <span class="details-val" id="detail-duration">-</span>
+                    </div>
+                    <div class="details-row">
+                        <span class="details-label">Status</span>
+                        <span class="details-val" id="detail-status">-</span>
+                    </div>
+                    <div class="details-row">
+                        <span class="details-label">Time Left</span>
+                        <span class="details-val" id="detail-remaining">-</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="margin-top: 20px; margin-bottom: 0;" onclick="closeDetailsModal()">Close</button>
+            </div>
+        </div>
+
         <div id="modal-alert" class="modal-overlay">
             <div class="modal-box">
                 <h3 style="color: var(--bg-dark); margin-bottom: 10px;">Notice</h3>
